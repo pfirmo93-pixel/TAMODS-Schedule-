@@ -445,6 +445,81 @@
     cursor: pointer;
   }
   .btn-salvar:disabled { background: var(--azul-claro); }
+
+  .btn-secundario {
+    flex: 1.4;
+    background: #eff6ff;
+    color: var(--azul);
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 12px 4px;
+    cursor: pointer;
+  }
+  .invoice-botoes-acao { flex-wrap: wrap; gap: 8px; }
+  .invoice-botoes-acao .btn-cancelar { flex: 1 0 100%; order: 4; }
+
+  .btn-invoice {
+    background: #eef2ff;
+    color: #4338ca;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ---------- Invoice / recibo ---------- */
+  .caixa-invoice { padding: 0; overflow: hidden; }
+  .invoice-papel { padding: 22px; }
+  .invoice-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid var(--texto);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+  .invoice-empresa-nome { font-size: 17px; font-weight: 700; }
+  .invoice-empresa-contato { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+  .invoice-tipo { text-align: right; }
+  .invoice-titulo { font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--azul); }
+  .invoice-numero { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+  .invoice-data { font-size: 12px; color: var(--texto-suave); }
+  .invoice-para { margin-bottom: 18px; }
+  .invoice-secao-rotulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--texto-suave); font-weight: 700; margin-bottom: 4px; }
+  .invoice-cliente-nome { font-size: 15px; font-weight: 600; }
+  .invoice-cliente-detalhe { font-size: 13px; color: var(--texto-suave); margin-top: 1px; }
+  .invoice-tabela { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .invoice-tabela th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--texto-suave);
+    border-bottom: 1px solid var(--borda);
+    padding-bottom: 8px;
+  }
+  .invoice-tabela td {
+    padding-top: 12px;
+    font-size: 14px;
+  }
+  .invoice-total-linha, .invoice-status-linha {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--borda);
+    font-size: 14px;
+  }
+  .invoice-total-linha { font-size: 18px; font-weight: 700; }
+  .invoice-status-linha { font-size: 13px; color: var(--texto-suave); border-top: none; padding-top: 6px; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #invoiceParaImprimir, #invoiceParaImprimir * { visibility: visible; }
+    #invoiceParaImprimir { position: absolute; top: 0; left: 0; width: 100%; padding: 0; }
+  }
 </style>
 </head>
 <body>
@@ -458,7 +533,10 @@
           <p class="titulo-app">Agenda de Limpeza</p>
           <p class="subtitulo-app">Toque em um dia para ver ou adicionar casas</p>
         </div>
-        <button class="btn-clientes-nav" id="btnAbrirClientes">👤 Clientes</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-clientes-nav" id="btnAbrirEmpresa" aria-label="Dados do negócio">⚙️</button>
+          <button class="btn-clientes-nav" id="btnAbrirClientes">👤 Clientes</button>
+        </div>
       </div>
     </div>
 
@@ -584,6 +662,78 @@
     </div>
   </div>
 
+  <!-- ===== Modal de dados do negócio (usado no cabeçalho da invoice) ===== -->
+  <div class="fundo-modal" id="fundoModalEmpresa">
+    <div class="caixa-modal">
+      <h3>Dados do seu negócio</h3>
+      <p class="subtitulo-app" style="margin:-6px 0 6px 0;">Aparecem no cabeçalho das invoices/recibos</p>
+      <div class="rotulo-campo">Nome do negócio</div>
+      <input type="text" id="campoEmpresaNome" placeholder="Ex: Silva Cleaning Services">
+      <div class="rotulo-campo">Telefone</div>
+      <input type="text" id="campoEmpresaTelefone" inputmode="tel" placeholder="Ex: (555) 123-4567">
+      <div class="rotulo-campo">Email</div>
+      <input type="text" id="campoEmpresaEmail" inputmode="email" placeholder="Ex: contato@email.com">
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="btnCancelarModalEmpresa">Cancelar</button>
+        <button class="btn-salvar" id="btnSalvarModalEmpresa">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal de invoice/recibo ===== -->
+  <div class="fundo-modal" id="fundoModalInvoice">
+    <div class="caixa-modal caixa-invoice">
+      <div id="invoiceParaImprimir" class="invoice-papel">
+        <div class="invoice-topo">
+          <div>
+            <div class="invoice-empresa-nome" id="invNomeEmpresa"></div>
+            <div class="invoice-empresa-contato" id="invContatoEmpresa"></div>
+          </div>
+          <div class="invoice-tipo">
+            <div class="invoice-titulo">INVOICE</div>
+            <div class="invoice-numero" id="invNumero"></div>
+            <div class="invoice-data" id="invData"></div>
+          </div>
+        </div>
+
+        <div class="invoice-para">
+          <div class="invoice-secao-rotulo">Cobrar de</div>
+          <div class="invoice-cliente-nome" id="invClienteNome"></div>
+          <div class="invoice-cliente-detalhe" id="invClienteEndereco"></div>
+          <div class="invoice-cliente-detalhe" id="invClienteTelefone"></div>
+        </div>
+
+        <table class="invoice-tabela">
+          <thead>
+            <tr><th>Descrição</th><th style="text-align:right;">Valor</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="invDescricao">Serviço de limpeza residencial</td>
+              <td style="text-align:right;" id="invValorLinha"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="invoice-total-linha">
+          <span>Total</span>
+          <span id="invTotal"></span>
+        </div>
+        <div class="invoice-status-linha">
+          <span>Status</span>
+          <span id="invStatus"></span>
+        </div>
+      </div>
+
+      <div class="botoes-modal invoice-botoes-acao">
+        <button class="btn-cancelar" id="btnFecharInvoice">Fechar</button>
+        <button class="btn-secundario" id="btnCopiarInvoice">📋 Copiar</button>
+        <button class="btn-secundario" id="btnImprimirInvoice">🖨️ PDF</button>
+        <button class="btn-salvar" id="btnCompartilharInvoice">📤 Compartilhar</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -656,6 +806,10 @@
     var partes = chave.split('-').map(Number);
     return partes[2] + ' ' + MESES[partes[1] - 1].slice(0, 3);
   }
+  function formatarDataCurtaComAno(chave) {
+    var partes = chave.split('-').map(Number);
+    return partes[2] + ' de ' + MESES[partes[1] - 1].slice(0, 3) + ' de ' + partes[0];
+  }
   function ligarTelefone(telefone) {
     window.location.href = 'tel:' + telefone.replace(/[^0-9+]/g, '');
   }
@@ -717,6 +871,53 @@
   var blocoPendencias = document.getElementById('blocoPendencias');
   var listaPendencias = document.getElementById('listaPendencias');
   var DIAS_TOLERANCIA_PAGAMENTO = 2;
+
+  var btnAbrirEmpresa = document.getElementById('btnAbrirEmpresa');
+  var fundoModalEmpresa = document.getElementById('fundoModalEmpresa');
+  var campoEmpresaNome = document.getElementById('campoEmpresaNome');
+  var campoEmpresaTelefone = document.getElementById('campoEmpresaTelefone');
+  var campoEmpresaEmail = document.getElementById('campoEmpresaEmail');
+  var btnCancelarModalEmpresa = document.getElementById('btnCancelarModalEmpresa');
+  var btnSalvarModalEmpresa = document.getElementById('btnSalvarModalEmpresa');
+
+  var fundoModalInvoice = document.getElementById('fundoModalInvoice');
+  var invNomeEmpresa = document.getElementById('invNomeEmpresa');
+  var invContatoEmpresa = document.getElementById('invContatoEmpresa');
+  var invNumero = document.getElementById('invNumero');
+  var invData = document.getElementById('invData');
+  var invClienteNome = document.getElementById('invClienteNome');
+  var invClienteEndereco = document.getElementById('invClienteEndereco');
+  var invClienteTelefone = document.getElementById('invClienteTelefone');
+  var invDescricao = document.getElementById('invDescricao');
+  var invValorLinha = document.getElementById('invValorLinha');
+  var invTotal = document.getElementById('invTotal');
+  var invStatus = document.getElementById('invStatus');
+  var btnFecharInvoice = document.getElementById('btnFecharInvoice');
+  var btnCopiarInvoice = document.getElementById('btnCopiarInvoice');
+  var btnImprimirInvoice = document.getElementById('btnImprimirInvoice');
+  var btnCompartilharInvoice = document.getElementById('btnCompartilharInvoice');
+  var textoInvoiceAtual = '';
+
+  var CHAVE_STORAGE_EMPRESA = 'agendaLimpezaEmpresa';
+  var CHAVE_STORAGE_INVOICE_NUM = 'agendaLimpezaProximoInvoiceNum';
+
+  function carregarEmpresa() {
+    try {
+      var bruto = localStorage.getItem(CHAVE_STORAGE_EMPRESA);
+      return bruto ? JSON.parse(bruto) : { nome: '', telefone: '', email: '' };
+    } catch (e) {
+      return { nome: '', telefone: '', email: '' };
+    }
+  }
+  function salvarEmpresaStorage(dados) {
+    localStorage.setItem(CHAVE_STORAGE_EMPRESA, JSON.stringify(dados));
+  }
+  function proximoNumeroInvoice() {
+    var atual = parseInt(localStorage.getItem(CHAVE_STORAGE_INVOICE_NUM) || '1', 10);
+    localStorage.setItem(CHAVE_STORAGE_INVOICE_NUM, String(atual + 1));
+    return 'INV-' + String(atual).padStart(4, '0');
+  }
+  var dadosEmpresa = carregarEmpresa();
 
   var NOMES_RECORRENCIA = {
     semanal: 'Toda semana',
@@ -1006,12 +1207,18 @@
       selo.textContent = casa.pago ? 'Pago' : 'Pendente';
       selo.addEventListener('click', function () { alternarPago(casa); });
 
+      var btnInvoice = document.createElement('button');
+      btnInvoice.className = 'btn-invoice';
+      btnInvoice.textContent = '🧾 Invoice';
+      btnInvoice.addEventListener('click', function () { abrirInvoice(casa); });
+
       var btnExcluir = document.createElement('button');
       btnExcluir.className = 'btn-excluir';
       btnExcluir.textContent = 'Excluir';
       btnExcluir.addEventListener('click', function () { excluirCasa(casa.id); });
 
       acoes.appendChild(selo);
+      acoes.appendChild(btnInvoice);
       acoes.appendChild(btnExcluir);
 
       card.appendChild(acoes);
@@ -1308,6 +1515,101 @@
       validarFormulario();
     } else {
       renderizarListaClientes();
+    }
+  });
+
+  // ---------- Modal: dados do negócio ----------
+  btnAbrirEmpresa.addEventListener('click', function () {
+    campoEmpresaNome.value = dadosEmpresa.nome || '';
+    campoEmpresaTelefone.value = dadosEmpresa.telefone || '';
+    campoEmpresaEmail.value = dadosEmpresa.email || '';
+    fundoModalEmpresa.classList.add('ativo');
+  });
+  btnCancelarModalEmpresa.addEventListener('click', function () {
+    fundoModalEmpresa.classList.remove('ativo');
+  });
+  fundoModalEmpresa.addEventListener('click', function (ev) {
+    if (ev.target === fundoModalEmpresa) fundoModalEmpresa.classList.remove('ativo');
+  });
+  btnSalvarModalEmpresa.addEventListener('click', function () {
+    dadosEmpresa = {
+      nome: campoEmpresaNome.value.trim(),
+      telefone: campoEmpresaTelefone.value.trim(),
+      email: campoEmpresaEmail.value.trim(),
+    };
+    salvarEmpresaStorage(dadosEmpresa);
+    fundoModalEmpresa.classList.remove('ativo');
+  });
+
+  // ---------- Modal: invoice / recibo ----------
+  function abrirInvoice(casa) {
+    var clienteVinculado = clientes.find(function (c) { return c.id === casa.clienteId; }) || null;
+    var nomeCliente = clienteVinculado ? clienteVinculado.nome : (casa.cliente || 'Cliente removido');
+
+    invNomeEmpresa.textContent = dadosEmpresa.nome || 'Minha empresa de limpeza';
+    var contatoPartes = [dadosEmpresa.telefone, dadosEmpresa.email].filter(Boolean);
+    invContatoEmpresa.textContent = contatoPartes.join(' · ');
+
+    var numero = proximoNumeroInvoice();
+    invNumero.textContent = numero;
+    invData.textContent = formatarDataCurtaComAno(diaSelecionado);
+
+    invClienteNome.textContent = nomeCliente;
+    invClienteEndereco.textContent = clienteVinculado && clienteVinculado.endereco ? clienteVinculado.endereco : '';
+    invClienteEndereco.style.display = clienteVinculado && clienteVinculado.endereco ? 'block' : 'none';
+    invClienteTelefone.textContent = clienteVinculado && clienteVinculado.telefone ? clienteVinculado.telefone : '';
+    invClienteTelefone.style.display = clienteVinculado && clienteVinculado.telefone ? 'block' : 'none';
+
+    invDescricao.textContent = 'Serviço de limpeza residencial — ' + formatarDataLonga(diaSelecionado);
+    invValorLinha.textContent = formatarMoeda(casa.valor);
+    invTotal.textContent = formatarMoeda(casa.valor);
+    invStatus.textContent = casa.pago ? '✅ Pago' : '⏳ Pendente';
+
+    textoInvoiceAtual =
+      (dadosEmpresa.nome || 'Minha empresa de limpeza') + '\n' +
+      contatoPartes.join(' · ') + '\n\n' +
+      'INVOICE ' + numero + ' — ' + invData.textContent + '\n\n' +
+      'Cobrar de: ' + nomeCliente + '\n' +
+      (clienteVinculado && clienteVinculado.endereco ? clienteVinculado.endereco + '\n' : '') +
+      (clienteVinculado && clienteVinculado.telefone ? clienteVinculado.telefone + '\n' : '') +
+      '\n' + invDescricao.textContent + ': ' + formatarMoeda(casa.valor) + '\n' +
+      'Total: ' + formatarMoeda(casa.valor) + '\n' +
+      'Status: ' + (casa.pago ? 'Pago' : 'Pendente');
+
+    fundoModalInvoice.classList.add('ativo');
+  }
+
+  btnFecharInvoice.addEventListener('click', function () {
+    fundoModalInvoice.classList.remove('ativo');
+  });
+  fundoModalInvoice.addEventListener('click', function (ev) {
+    if (ev.target === fundoModalInvoice) fundoModalInvoice.classList.remove('ativo');
+  });
+
+  btnCopiarInvoice.addEventListener('click', function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(textoInvoiceAtual).then(function () {
+        alert('Invoice copiada! Agora é só colar onde quiser (WhatsApp, mensagem, etc.)');
+      }).catch(function () {
+        alert('Não consegui copiar automaticamente. Selecione o texto manualmente.');
+      });
+    } else {
+      alert('Seu navegador não suporta copiar automaticamente.');
+    }
+  });
+
+  btnImprimirInvoice.addEventListener('click', function () {
+    window.print();
+  });
+
+  btnCompartilharInvoice.addEventListener('click', function () {
+    if (navigator.share) {
+      navigator.share({ title: 'Invoice', text: textoInvoiceAtual }).catch(function () {});
+    } else {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textoInvoiceAtual);
+      }
+      alert('Seu navegador não tem compartilhamento direto — copiei o texto da invoice, é só colar onde quiser.');
     }
   });
 
