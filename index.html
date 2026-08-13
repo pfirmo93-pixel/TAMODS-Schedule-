@@ -717,7 +717,7 @@
       <div class="rotulo-campo">Nome do negócio</div>
       <input type="text" id="campoEmpresaNome" placeholder="Ex: Silva Cleaning Services">
       <div class="rotulo-campo">Endereço</div>
-      <input type="text" id="campoEmpresaEndereco" placeholder="Ex: 730 NW 44th Ter, Deerfield Beach, FL 33442">
+      <input type="text" id="campoEmpresaEndereco" placeholder="Ex: 730 NW 44th Ter, Apt 204, Deerfield Beach, FL 33442">
       <div class="rotulo-campo">Telefone</div>
       <input type="text" id="campoEmpresaTelefone" inputmode="tel" placeholder="Ex: +1 (954) 305-2837">
       <div class="rotulo-campo">Email</div>
@@ -873,6 +873,12 @@
   function abrirMapa(endereco) {
     window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endereco), '_blank');
   }
+  function abrirSmsComMensagem(telefone, mensagem) {
+    var numero = (telefone || '').replace(/[^0-9+]/g, '');
+    var ehIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    var separador = ehIOS ? '&' : '?';
+    window.location.href = 'sms:' + numero + separador + 'body=' + encodeURIComponent(mensagem);
+  }
   function construirMensagemAgendamento(cliente, dataChave) {
     var dataTexto = formatarDataIngles(dataChave);
     var nomeEmpresaTexto = (dadosEmpresa && dadosEmpresa.nome) || 'TAMODS CORP';
@@ -881,10 +887,18 @@
   function enviarAvisoAgendamento(cliente, dataChave) {
     var mensagem = construirMensagemAgendamento(cliente, dataChave);
     window.__ultimaMensagemAgendamento = mensagem;
-    var numero = (cliente.telefone || '').replace(/[^0-9+]/g, '');
-    var ehIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    var separador = ehIOS ? '&' : '?';
-    window.location.href = 'sms:' + numero + separador + 'body=' + encodeURIComponent(mensagem);
+    abrirSmsComMensagem(cliente.telefone, mensagem);
+  }
+  function construirMensagemPagamento(cliente, casa, dataChave) {
+    var dataTexto = formatarDataIngles(dataChave);
+    var valorTexto = formatarMoeda(casa.valor);
+    var nomeEmpresaTexto = (dadosEmpresa && dadosEmpresa.nome) || 'TAMODS CORP';
+    return 'Hi ' + cliente.nome + ', this is a friendly reminder that the payment (' + valorTexto + ') for your house cleaning on ' + dataTexto + ' is still pending. Please let us know if you have any questions. Thank you! - ' + nomeEmpresaTexto;
+  }
+  function enviarAvisoPagamento(cliente, casa, dataChave) {
+    var mensagem = construirMensagemPagamento(cliente, casa, dataChave);
+    window.__ultimaMensagemPagamento = mensagem;
+    abrirSmsComMensagem(cliente.telefone, mensagem);
   }
 
   // ---------- Estado ----------
@@ -987,7 +1001,7 @@
 
   var EMPRESA_PADRAO = {
     nome: 'TAMODS CORP',
-    endereco: '730 NW 44th Ter, Deerfield Beach, FL 33442',
+    endereco: '730 NW 44th Ter, Apt 204, Deerfield Beach, FL 33442',
     telefone: '+1 (954) 305-2837',
     email: '',
   };
@@ -1096,7 +1110,7 @@
         if (casa.pago) return;
         var clienteVinculado = clientes.find(function (c) { return c.id === casa.clienteId; }) || null;
         var nome = clienteVinculado ? clienteVinculado.nome : (casa.cliente || 'Cliente removido');
-        pendentes.push({ data: data, casa: casa, nome: nome, diasAtras: diasAtras });
+        pendentes.push({ data: data, casa: casa, nome: nome, diasAtras: diasAtras, cliente: clienteVinculado });
       });
     });
 
@@ -1114,6 +1128,14 @@
     pendentes.forEach(function (item) {
       var linha = document.createElement('div');
       linha.className = 'lembrete-item';
+      linha.style.flexDirection = 'column';
+      linha.style.alignItems = 'stretch';
+      linha.style.gap = '8px';
+
+      var topo = document.createElement('div');
+      topo.style.display = 'flex';
+      topo.style.justifyContent = 'space-between';
+      topo.style.alignItems = 'center';
 
       var info = document.createElement('div');
       info.innerHTML = '<div class="lembrete-nome"></div><div class="lembrete-freq"></div>';
@@ -1124,8 +1146,29 @@
       selo.className = 'lembrete-quando atrasado';
       selo.textContent = 'Há ' + item.diasAtras + 'd';
 
-      linha.appendChild(info);
-      linha.appendChild(selo);
+      topo.appendChild(info);
+      topo.appendChild(selo);
+      linha.appendChild(topo);
+
+      if (item.cliente && item.cliente.telefone) {
+        var btnCobrar = document.createElement('button');
+        btnCobrar.className = 'btn-contato';
+        btnCobrar.innerHTML = '<span class="icone">💬</span> Cobrar pagamento';
+        btnCobrar.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          enviarAvisoPagamento(item.cliente, item.casa, item.data);
+        });
+        linha.appendChild(btnCobrar);
+      } else {
+        var avisoSemTelefone = document.createElement('p');
+        avisoSemTelefone.className = 'texto-ajuda';
+        avisoSemTelefone.style.margin = '0';
+        avisoSemTelefone.textContent = item.cliente
+          ? 'Sem telefone cadastrado pra ' + item.nome + '. Adicione o telefone em "Clientes" pra poder cobrar por mensagem.'
+          : 'Essa casa não está vinculada a um cliente cadastrado, então não dá pra enviar mensagem automática.';
+        linha.appendChild(avisoSemTelefone);
+      }
+
       linha.addEventListener('click', function () { navegarParaDataLembrete(item.data); });
       listaPendencias.appendChild(linha);
     });
