@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agenda de Limpeza">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2563eb">
+<title>Agenda de Limpeza</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-apple-touch.png">
+<style>
+  :root {
+    --azul: #2563eb;
+    --azul-claro: #93c5fd;
+    --fundo: #f3f4f6;
+    --texto: #111827;
+    --texto-suave: #6b7280;
+    --verde: #22c55e;
+    --verde-claro: #dcfce7;
+    --laranja: #f59e0b;
+    --laranja-claro: #fef3c7;
+    --vermelho: #dc2626;
+    --borda: #e5e7eb;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--fundo);
+    color: var(--texto);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    height: 100%;
+    overscroll-behavior-y: contain;
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--fundo);
+    position: relative;
+    padding-bottom: 100px;
+  }
+  .view { display: none; }
+  .view.ativa { display: block; }
+
+  /* ---------- Cabeçalho ---------- */
+  .cabecalho {
+    padding: 18px 20px 6px 20px;
+  }
+  .titulo-app {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .subtitulo-app {
+    font-size: 13px;
+    color: var(--texto-suave);
+    margin: 4px 0 0 0;
+  }
+
+  /* ---------- Calendário ---------- */
+  .cartao {
+    background: #fff;
+    border-radius: 14px;
+    margin: 12px 16px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-nav button {
+    background: none;
+    border: none;
+    color: var(--azul);
+    font-size: 22px;
+    padding: 4px 14px;
+    cursor: pointer;
+  }
+  .cal-mes-ano {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .cal-semana, .cal-grade {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .cal-semana div {
+    text-align: center;
+    font-size: 11px;
+    color: var(--texto-suave);
+    font-weight: 600;
+    padding: 4px 0;
+  }
+  .cal-dia {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    font-size: 14px;
+    color: var(--texto);
+  }
+  .cal-dia.vazio { cursor: default; }
+  .cal-dia.hoje { color: var(--azul); font-weight: 700; }
+  .cal-dia .bolinha {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    margin-top: 3px;
+  }
+  .cal-dia:active { background: var(--borda); }
+
+  .resumo-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+  }
+  .resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .resumo-linha span:first-child { color: var(--texto-suave); }
+  .resumo-linha span:last-child { font-weight: 600; }
+  .resumo-pendente { color: #d97706 !important; }
+
+  .legenda {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 14px 0;
+    font-size: 12px;
+    color: var(--texto-suave);
+  }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .legenda .bolinha { width: 8px; height: 8px; border-radius: 4px; }
+
+  /* ---------- Tela do dia ---------- */
+  .barra-dia {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px 0 16px;
+    gap: 10px;
+  }
+  .voltar {
+    background: none;
+    border: none;
+    color: var(--azul);
+    font-size: 16px;
+    padding: 6px 4px;
+    cursor: pointer;
+  }
+  .data-dia {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .totais-dia {
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+    margin: 10px 16px 0 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .total-rotulo { font-size: 12px; color: var(--texto-suave); }
+  .total-valor { font-size: 19px; font-weight: 700; margin-top: 2px; }
+
+  .lista-casas { padding: 14px 16px; }
+  .vazio-lista {
+    text-align: center;
+    color: #9ca3af;
+    margin-top: 30px;
+    padding: 0 20px;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  .casa-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .casa-info { margin-bottom: 10px; cursor: pointer; }
+  .casa-nome { font-size: 16px; font-weight: 600; }
+  .casa-valor { font-size: 14px; color: var(--texto-suave); margin-top: 2px; }
+  .casa-acoes { display: flex; justify-content: space-between; align-items: center; }
+  .selo {
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .selo.pago { background: var(--verde-claro); color: #166534; }
+  .selo.pendente { background: var(--laranja-claro); color: #92400e; }
+  .btn-excluir {
+    background: none;
+    border: none;
+    color: var(--vermelho);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+
+  .btn-adicionar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 440px;
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    padding: 15px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.35);
+    cursor: pointer;
+  }
+
+  /* ---------- Modal ---------- */
+  .fundo-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 20;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .fundo-modal.ativo { display: flex; }
+  .caixa-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 480px;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 22px 30px 22px;
+  }
+  .caixa-modal h3 { margin: 0 0 16px 0; font-size: 19px; }
+  .rotulo-campo {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    margin: 12px 0 6px 0;
+  }
+  .caixa-modal input[type=text], .caixa-modal input[type=number] {
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 16px;
+  }
+  .opcoes-status { display: flex; gap: 8px; margin-top: 4px; }
+  .opcao-status {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    text-align: center;
+    font-weight: 600;
+    color: var(--texto-suave);
+    cursor: pointer;
+  }
+  .opcao-status.ativa-pendente { background: var(--laranja-claro); border-color: var(--laranja); color: var(--texto); }
+  .opcao-status.ativa-pago { background: var(--verde-claro); border-color: var(--verde); color: var(--texto); }
+  .botoes-modal { display: flex; margin-top: 22px; gap: 10px; }
+  .btn-cancelar {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--texto-suave);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .btn-salvar {
+    flex: 2;
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .btn-salvar:disabled { background: var(--azul-claro); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Tela do calendário ===== -->
+  <div id="viewCalendario" class="view ativa">
+    <div class="cabecalho">
+      <p class="titulo-app">Agenda de Limpeza</p>
+      <p class="subtitulo-app">Toque em um dia para ver ou adicionar casas</p>
+    </div>
+
+    <div class="cartao">
+      <div class="cal-nav">
+        <button id="btnMesAnterior" aria-label="Mês anterior">‹</button>
+        <div class="cal-mes-ano" id="calMesAno"></div>
+        <button id="btnMesProximo" aria-label="Próximo mês">›</button>
+      </div>
+      <div class="cal-semana">
+        <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+      </div>
+      <div class="cal-grade" id="calGrade"></div>
+    </div>
+
+    <div class="cartao">
+      <p class="resumo-titulo">Resumo do mês</p>
+      <div class="resumo-linha"><span>Dias com serviço</span><span id="resumoDias">0</span></div>
+      <div class="resumo-linha"><span>Total previsto</span><span id="resumoTotal">R$ 0,00</span></div>
+      <div class="resumo-linha"><span>Ainda a receber</span><span id="resumoPendente" class="resumo-pendente">R$ 0,00</span></div>
+    </div>
+
+    <div class="legenda">
+      <span><span class="bolinha" style="background:var(--laranja)"></span>Tem casa pendente</span>
+      <span><span class="bolinha" style="background:var(--verde)"></span>Tudo pago</span>
+    </div>
+  </div>
+
+  <!-- ===== Tela do dia ===== -->
+  <div id="viewDia" class="view">
+    <div class="barra-dia">
+      <button class="voltar" id="btnVoltar">‹ Voltar</button>
+    </div>
+    <div class="cabecalho" style="padding-top:4px;">
+      <p class="data-dia" id="dataDiaTitulo"></p>
+    </div>
+    <div class="totais-dia">
+      <div>
+        <div class="total-rotulo">Total do dia</div>
+        <div class="total-valor" id="totalDiaValor">R$ 0,00</div>
+      </div>
+      <div>
+        <div class="total-rotulo">A receber</div>
+        <div class="total-valor resumo-pendente" id="pendenteDiaValor">R$ 0,00</div>
+      </div>
+    </div>
+    <div class="lista-casas" id="listaCasas"></div>
+    <button class="btn-adicionar" id="btnAdicionarCasa">+ Adicionar casa</button>
+  </div>
+
+  <!-- ===== Modal de adicionar/editar ===== -->
+  <div class="fundo-modal" id="fundoModal">
+    <div class="caixa-modal">
+      <h3 id="tituloModal">Adicionar casa</h3>
+      <div class="rotulo-campo">Nome do cliente / casa</div>
+      <input type="text" id="campoCliente" placeholder="Ex: Casa da Maria">
+      <div class="rotulo-campo">Valor (R$)</div>
+      <input type="text" id="campoValor" inputmode="decimal" placeholder="Ex: 150,00">
+      <div class="rotulo-campo">Status do pagamento</div>
+      <div class="opcoes-status">
+        <div class="opcao-status" id="opcaoPendente">Pendente</div>
+        <div class="opcao-status" id="opcaoPago">Pago</div>
+      </div>
+      <div class="botoes-modal">
+        <button class="btn-cancelar" id="btnCancelarModal">Cancelar</button>
+        <button class="btn-salvar" id="btnSalvarModal" disabled>Salvar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CHAVE_STORAGE = 'agendaLimpezaCasas';
+  var MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var DIAS_SEMANA = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+  // ---------- Armazenamento local (fica salvo no navegador do celular) ----------
+  function carregarTudo() {
+    try {
+      var bruto = localStorage.getItem(CHAVE_STORAGE);
+      return bruto ? JSON.parse(bruto) : {};
+    } catch (e) {
+      console.warn('Erro ao carregar dados salvos:', e);
+      return {};
+    }
+  }
+  function salvarTudo(dados) {
+    try {
+      localStorage.setItem(CHAVE_STORAGE, JSON.stringify(dados));
+    } catch (e) {
+      console.warn('Erro ao salvar dados:', e);
+      alert('Não foi possível salvar os dados neste navegador.');
+    }
+  }
+  function gerarId() {
+    return Date.now().toString() + '-' + Math.floor(Math.random() * 100000);
+  }
+
+  // ---------- Utilidades de formatação ----------
+  function formatarMoeda(valor) {
+    var numero = Number(valor) || 0;
+    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  function paraChaveData(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+  function hojeChave() {
+    var h = new Date();
+    return paraChaveData(h.getFullYear(), h.getMonth(), h.getDate());
+  }
+  function formatarDataLonga(chave) {
+    var partes = chave.split('-').map(Number);
+    var d = new Date(partes[0], partes[1] - 1, partes[2]);
+    var texto = DIAS_SEMANA[d.getDay()] + ', ' + partes[2] + ' de ' + MESES[partes[1] - 1].toLowerCase() + ' de ' + partes[0];
+    return texto;
+  }
+
+  // ---------- Estado ----------
+  var hoje = new Date();
+  var mesVisivelAno = hoje.getFullYear();
+  var mesVisivelMes = hoje.getMonth(); // 0-11
+  var diaSelecionado = null; // 'YYYY-MM-DD'
+  var casaEmEdicaoId = null;
+  var statusFormulario = false; // false = pendente, true = pago
+  var todosOsDados = carregarTudo();
+
+  // ---------- Referências DOM ----------
+  var viewCalendario = document.getElementById('viewCalendario');
+  var viewDia = document.getElementById('viewDia');
+  var calMesAno = document.getElementById('calMesAno');
+  var calGrade = document.getElementById('calGrade');
+  var resumoDias = document.getElementById('resumoDias');
+  var resumoTotal = document.getElementById('resumoTotal');
+  var resumoPendente = document.getElementById('resumoPendente');
+  var dataDiaTitulo = document.getElementById('dataDiaTitulo');
+  var totalDiaValor = document.getElementById('totalDiaValor');
+  var pendenteDiaValor = document.getElementById('pendenteDiaValor');
+  var listaCasas = document.getElementById('listaCasas');
+  var fundoModal = document.getElementById('fundoModal');
+  var tituloModal = document.getElementById('tituloModal');
+  var campoCliente = document.getElementById('campoCliente');
+  var campoValor = document.getElementById('campoValor');
+  var opcaoPendente = document.getElementById('opcaoPendente');
+  var opcaoPago = document.getElementById('opcaoPago');
+  var btnSalvarModal = document.getElementById('btnSalvarModal');
+
+  // ---------- Renderização do calendário ----------
+  function renderizarCalendario() {
+    calMesAno.textContent = MESES[mesVisivelMes] + ' de ' + mesVisivelAno;
+    calGrade.innerHTML = '';
+
+    var primeiroDiaSemana = new Date(mesVisivelAno, mesVisivelMes, 1).getDay(); // 0=Dom
+    var totalDias = new Date(mesVisivelAno, mesVisivelMes + 1, 0).getDate();
+    var hojeStr = hojeChave();
+
+    for (var i = 0; i < primeiroDiaSemana; i++) {
+      var vazio = document.createElement('div');
+      vazio.className = 'cal-dia vazio';
+      calGrade.appendChild(vazio);
+    }
+
+    for (var dia = 1; dia <= totalDias; dia++) {
+      var chave = paraChaveData(mesVisivelAno, mesVisivelMes, dia);
+      var casasDoDia = todosOsDados[chave] || [];
+
+      var el = document.createElement('div');
+      el.className = 'cal-dia' + (chave === hojeStr ? ' hoje' : '');
+      el.innerHTML = '<span>' + dia + '</span>';
+
+      if (casasDoDia.length > 0) {
+        var todasPagas = casasDoDia.every(function (c) { return c.pago; });
+        var bolinha = document.createElement('div');
+        bolinha.className = 'bolinha';
+        bolinha.style.background = todasPagas ? 'var(--verde)' : 'var(--laranja)';
+        el.appendChild(bolinha);
+      }
+
+      (function (chaveDia) {
+        el.addEventListener('click', function () { abrirDia(chaveDia); });
+      })(chave);
+
+      calGrade.appendChild(el);
+    }
+
+    renderizarResumoMes();
+  }
+
+  function renderizarResumoMes() {
+    var total = 0, pendente = 0, diasComServico = 0;
+    var prefixoMes = mesVisivelAno + '-' + String(mesVisivelMes + 1).padStart(2, '0');
+
+    Object.keys(todosOsDados).forEach(function (chave) {
+      if (chave.slice(0, 7) !== prefixoMes) return;
+      var casas = todosOsDados[chave] || [];
+      if (casas.length > 0) diasComServico++;
+      casas.forEach(function (c) {
+        total += Number(c.valor) || 0;
+        if (!c.pago) pendente += Number(c.valor) || 0;
+      });
+    });
+
+    resumoDias.textContent = diasComServico;
+    resumoTotal.textContent = formatarMoeda(total);
+    resumoPendente.textContent = formatarMoeda(pendente);
+  }
+
+  // ---------- Navegação de mês ----------
+  document.getElementById('btnMesAnterior').addEventListener('click', function () {
+    mesVisivelMes--;
+    if (mesVisivelMes < 0) { mesVisivelMes = 11; mesVisivelAno--; }
+    renderizarCalendario();
+  });
+  document.getElementById('btnMesProximo').addEventListener('click', function () {
+    mesVisivelMes++;
+    if (mesVisivelMes > 11) { mesVisivelMes = 0; mesVisivelAno++; }
+    renderizarCalendario();
+  });
+
+  // ---------- Tela do dia ----------
+  function abrirDia(chave) {
+    diaSelecionado = chave;
+    dataDiaTitulo.textContent = formatarDataLonga(chave);
+    viewCalendario.classList.remove('ativa');
+    viewDia.classList.add('ativa');
+    renderizarListaCasas();
+  }
+
+  document.getElementById('btnVoltar').addEventListener('click', function () {
+    viewDia.classList.remove('ativa');
+    viewCalendario.classList.add('ativa');
+    renderizarCalendario();
+  });
+
+  function renderizarListaCasas() {
+    var casas = todosOsDados[diaSelecionado] || [];
+    var total = 0, pendente = 0;
+    casas.forEach(function (c) {
+      total += Number(c.valor) || 0;
+      if (!c.pago) pendente += Number(c.valor) || 0;
+    });
+    totalDiaValor.textContent = formatarMoeda(total);
+    pendenteDiaValor.textContent = formatarMoeda(pendente);
+
+    listaCasas.innerHTML = '';
+
+    if (casas.length === 0) {
+      var vazio = document.createElement('p');
+      vazio.className = 'vazio-lista';
+      vazio.textContent = 'Nenhuma casa cadastrada para este dia ainda. Toque em "+ Adicionar casa" para começar.';
+      listaCasas.appendChild(vazio);
+      return;
+    }
+
+    casas.forEach(function (casa) {
+      var card = document.createElement('div');
+      card.className = 'casa-card';
+
+      var info = document.createElement('div');
+      info.className = 'casa-info';
+      info.innerHTML = '<div class="casa-nome"></div><div class="casa-valor"></div>';
+      info.querySelector('.casa-nome').textContent = casa.cliente;
+      info.querySelector('.casa-valor').textContent = formatarMoeda(casa.valor);
+      info.addEventListener('click', function () { abrirModal(casa); });
+
+      var acoes = document.createElement('div');
+      acoes.className = 'casa-acoes';
+
+      var selo = document.createElement('button');
+      selo.className = 'selo ' + (casa.pago ? 'pago' : 'pendente');
+      selo.textContent = casa.pago ? 'Pago' : 'Pendente';
+      selo.addEventListener('click', function () { alternarPago(casa); });
+
+      var btnExcluir = document.createElement('button');
+      btnExcluir.className = 'btn-excluir';
+      btnExcluir.textContent = 'Excluir';
+      btnExcluir.addEventListener('click', function () { excluirCasa(casa.id); });
+
+      acoes.appendChild(selo);
+      acoes.appendChild(btnExcluir);
+
+      card.appendChild(info);
+      card.appendChild(acoes);
+      listaCasas.appendChild(card);
+    });
+  }
+
+  function alternarPago(casa) {
+    var lista = todosOsDados[diaSelecionado] || [];
+    lista = lista.map(function (c) {
+      if (c.id === casa.id) return Object.assign({}, c, { pago: !c.pago });
+      return c;
+    });
+    todosOsDados[diaSelecionado] = lista;
+    salvarTudo(todosOsDados);
+    renderizarListaCasas();
+  }
+
+  function excluirCasa(id) {
+    var lista = (todosOsDados[diaSelecionado] || []).filter(function (c) { return c.id !== id; });
+    if (lista.length > 0) {
+      todosOsDados[diaSelecionado] = lista;
+    } else {
+      delete todosOsDados[diaSelecionado];
+    }
+    salvarTudo(todosOsDados);
+    renderizarListaCasas();
+  }
+
+  // ---------- Modal (adicionar / editar) ----------
+  document.getElementById('btnAdicionarCasa').addEventListener('click', function () { abrirModal(null); });
+  document.getElementById('btnCancelarModal').addEventListener('click', fecharModal);
+  fundoModal.addEventListener('click', function (ev) {
+    if (ev.target === fundoModal) fecharModal();
+  });
+
+  function abrirModal(casa) {
+    casaEmEdicaoId = casa ? casa.id : null;
+    tituloModal.textContent = casa ? 'Editar casa' : 'Adicionar casa';
+    campoCliente.value = casa ? casa.cliente : '';
+    campoValor.value = casa ? String(casa.valor).replace('.', ',') : '';
+    statusFormulario = casa ? !!casa.pago : false;
+    atualizarOpcoesStatus();
+    validarFormulario();
+    fundoModal.classList.add('ativo');
+    setTimeout(function () { campoCliente.focus(); }, 50);
+  }
+
+  function fecharModal() {
+    fundoModal.classList.remove('ativo');
+  }
+
+  function atualizarOpcoesStatus() {
+    opcaoPendente.className = 'opcao-status' + (!statusFormulario ? ' ativa-pendente' : '');
+    opcaoPago.className = 'opcao-status' + (statusFormulario ? ' ativa-pago' : '');
+  }
+  opcaoPendente.addEventListener('click', function () { statusFormulario = false; atualizarOpcoesStatus(); });
+  opcaoPago.addEventListener('click', function () { statusFormulario = true; atualizarOpcoesStatus(); });
+
+  function valorFormularioNumero() {
+    var texto = campoValor.value.trim();
+    if (!texto) return NaN;
+    var normalizado = texto.replace(/\./g, '').replace(',', '.');
+    return parseFloat(normalizado);
+  }
+
+  function validarFormulario() {
+    var nomeOk = campoCliente.value.trim().length > 0;
+    var valorNum = valorFormularioNumero();
+    var valorOk = !isNaN(valorNum) && valorNum >= 0;
+    btnSalvarModal.disabled = !(nomeOk && valorOk);
+  }
+  campoCliente.addEventListener('input', validarFormulario);
+  campoValor.addEventListener('input', validarFormulario);
+
+  btnSalvarModal.addEventListener('click', function () {
+    var nome = campoCliente.value.trim();
+    var valorNum = valorFormularioNumero();
+    if (!nome || isNaN(valorNum) || valorNum < 0) return;
+
+    var lista = todosOsDados[diaSelecionado] ? todosOsDados[diaSelecionado].slice() : [];
+
+    if (casaEmEdicaoId) {
+      lista = lista.map(function (c) {
+        if (c.id === casaEmEdicaoId) return { id: c.id, cliente: nome, valor: valorNum, pago: statusFormulario };
+        return c;
+      });
+    } else {
+      lista.push({ id: gerarId(), cliente: nome, valor: valorNum, pago: statusFormulario });
+    }
+
+    todosOsDados[diaSelecionado] = lista;
+    salvarTudo(todosOsDados);
+    fecharModal();
+    renderizarListaCasas();
+  });
+
+  // ---------- Inicialização ----------
+  renderizarCalendario();
+})();
+
+// Registra o service worker (permite instalar como app e funcionar offline).
+// Só funciona quando o site está hospedado em https (ou aberto como app já
+// instalado) — se o navegador não suportar aqui, o app continua funcionando
+// normalmente, só sem esse recurso extra.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {
+      // Sem problema se não conseguir registrar (ex: abrindo como arquivo local)
+    });
+  });
+}
+</script>
+</body>
+</html>
