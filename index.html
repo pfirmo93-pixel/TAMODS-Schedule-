@@ -42,7 +42,7 @@
     min-height: 100vh;
     background: var(--fundo);
     position: relative;
-    padding-bottom: 100px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
   }
   .view { display: none; }
   .view.ativa { display: block; }
@@ -316,7 +316,7 @@
 
   .btn-adicionar {
     position: fixed;
-    bottom: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
     width: calc(100% - 40px);
@@ -357,13 +357,58 @@
     color: var(--texto-suave);
     margin: 12px 0 6px 0;
   }
-  .caixa-modal input[type=text], .caixa-modal input[type=number] {
+  .caixa-modal input[type=text], .caixa-modal input[type=number], .caixa-modal input[type=date] {
     width: 100%;
     border: 1px solid #d1d5db;
     border-radius: 10px;
     padding: 11px 14px;
     font-size: 16px;
+    background: #fff;
+    color: var(--texto);
   }
+  #blocoProximaData.oculto { display: none; }
+
+  /* ---------- Lembretes ---------- */
+  .lembretes {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    margin: 12px 16px;
+    padding: 14px;
+  }
+  .lembretes.pendencias {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+  .lembretes.pendencias .lembretes-titulo { color: #991b1b; }
+  .lembretes.pendencias .lembrete-item { border-top-color: #fecaca; }
+  .lembretes-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: #9a3412;
+  }
+  .lembrete-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid #fed7aa;
+    cursor: pointer;
+  }
+  .lembrete-item:first-child { border-top: none; }
+  .lembrete-nome { font-size: 14px; font-weight: 600; color: var(--texto); }
+  .lembrete-freq { font-size: 12px; color: var(--texto-suave); margin-top: 1px; }
+  .lembrete-quando {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+  .lembrete-quando.futuro { background: #fef3c7; color: #92400e; }
+  .lembrete-quando.hoje { background: #fee2e2; color: #991b1b; }
+  .lembrete-quando.atrasado { background: #fecaca; color: #7f1d1d; }
   .opcoes-status { display: flex; gap: 8px; margin-top: 4px; }
   .opcao-status {
     flex: 1;
@@ -415,6 +460,16 @@
         </div>
         <button class="btn-clientes-nav" id="btnAbrirClientes">👤 Clientes</button>
       </div>
+    </div>
+
+    <div class="lembretes pendencias" id="blocoPendencias" style="display:none;">
+      <p class="lembretes-titulo">💰 Pagamentos pendentes</p>
+      <div id="listaPendencias"></div>
+    </div>
+
+    <div class="lembretes" id="blocoLembretes" style="display:none;">
+      <p class="lembretes-titulo">🔔 Lembretes de recorrência</p>
+      <div id="listaLembretes"></div>
     </div>
 
     <div class="cartao">
@@ -471,8 +526,8 @@
       <div class="rotulo-campo">Cliente</div>
       <select id="campoClienteSelect"></select>
       <button type="button" class="link-adicionar-cliente" id="btnNovoClienteRapido">+ Cadastrar novo cliente</button>
-      <div class="rotulo-campo">Valor (R$)</div>
-      <input type="text" id="campoValor" inputmode="decimal" placeholder="Ex: 150,00">
+      <div class="rotulo-campo">Valor (US$)</div>
+      <input type="text" id="campoValor" inputmode="decimal" placeholder="Ex: 150.00">
       <div class="rotulo-campo">Status do pagamento</div>
       <div class="opcoes-status">
         <div class="opcao-status" id="opcaoPendente">Pendente</div>
@@ -505,11 +560,23 @@
       <div class="rotulo-campo">Nome</div>
       <input type="text" id="campoClienteNome" placeholder="Ex: Maria Silva">
       <div class="rotulo-campo">Telefone</div>
-      <input type="text" id="campoClienteTelefone" inputmode="tel" placeholder="Ex: (11) 99999-9999">
+      <input type="text" id="campoClienteTelefone" inputmode="tel" placeholder="Ex: (555) 123-4567">
       <div class="rotulo-campo">Endereço</div>
-      <input type="text" id="campoClienteEndereco" placeholder="Ex: Rua das Flores, 123 - Centro">
+      <input type="text" id="campoClienteEndereco" placeholder="Ex: 123 Main St, Orlando, FL">
       <div class="rotulo-campo">Observações</div>
       <textarea id="campoClienteObs" placeholder="Ex: levar produto próprio, cuidado com o cachorro..."></textarea>
+      <div class="rotulo-campo">Repete a cada</div>
+      <select id="campoClienteRecorrencia">
+        <option value="">Não se repete</option>
+        <option value="semanal">Toda semana</option>
+        <option value="quinzenal">A cada 2 semanas</option>
+        <option value="trisemanal">A cada 3 semanas</option>
+        <option value="mensal">Todo mês</option>
+      </select>
+      <div id="blocoProximaData">
+        <div class="rotulo-campo">Próxima visita prevista</div>
+        <input type="date" id="campoClienteProximaData">
+      </div>
       <div class="botoes-modal">
         <button class="btn-cancelar" id="btnCancelarModalCliente">Cancelar</button>
         <button class="btn-salvar" id="btnSalvarModalCliente" disabled>Salvar</button>
@@ -570,7 +637,7 @@
   // ---------- Utilidades de formatação ----------
   function formatarMoeda(valor) {
     var numero = Number(valor) || 0;
-    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return numero.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   }
   function paraChaveData(ano, mes, dia) {
     return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
@@ -584,6 +651,10 @@
     var d = new Date(partes[0], partes[1] - 1, partes[2]);
     var texto = DIAS_SEMANA[d.getDay()] + ', ' + partes[2] + ' de ' + MESES[partes[1] - 1].toLowerCase() + ' de ' + partes[0];
     return texto;
+  }
+  function formatarDataCurta(chave) {
+    var partes = chave.split('-').map(Number);
+    return partes[2] + ' ' + MESES[partes[1] - 1].slice(0, 3);
   }
   function ligarTelefone(telefone) {
     window.location.href = 'tel:' + telefone.replace(/[^0-9+]/g, '');
@@ -636,8 +707,42 @@
   var campoClienteTelefone = document.getElementById('campoClienteTelefone');
   var campoClienteEndereco = document.getElementById('campoClienteEndereco');
   var campoClienteObs = document.getElementById('campoClienteObs');
+  var campoClienteRecorrencia = document.getElementById('campoClienteRecorrencia');
+  var campoClienteProximaData = document.getElementById('campoClienteProximaData');
+  var blocoProximaData = document.getElementById('blocoProximaData');
   var btnCancelarModalCliente = document.getElementById('btnCancelarModalCliente');
   var btnSalvarModalCliente = document.getElementById('btnSalvarModalCliente');
+  var blocoLembretes = document.getElementById('blocoLembretes');
+  var listaLembretes = document.getElementById('listaLembretes');
+  var blocoPendencias = document.getElementById('blocoPendencias');
+  var listaPendencias = document.getElementById('listaPendencias');
+  var DIAS_TOLERANCIA_PAGAMENTO = 2;
+
+  var NOMES_RECORRENCIA = {
+    semanal: 'Toda semana',
+    quinzenal: 'A cada 2 semanas',
+    trisemanal: 'A cada 3 semanas',
+    mensal: 'Todo mês',
+  };
+  var DIAS_POR_RECORRENCIA = { semanal: 7, quinzenal: 14, trisemanal: 21 };
+
+  function calcularProximaData(dataBase, tipo) {
+    var partes = dataBase.split('-').map(Number);
+    var d = new Date(partes[0], partes[1] - 1, partes[2]);
+    if (tipo === 'mensal') {
+      d.setMonth(d.getMonth() + 1);
+    } else {
+      d.setDate(d.getDate() + (DIAS_POR_RECORRENCIA[tipo] || 7));
+    }
+    return paraChaveData(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  function diferencaEmDias(dataA, dataB) {
+    var pa = dataA.split('-').map(Number);
+    var pb = dataB.split('-').map(Number);
+    var da = new Date(pa[0], pa[1] - 1, pa[2]);
+    var db = new Date(pb[0], pb[1] - 1, pb[2]);
+    return Math.round((db - da) / 86400000);
+  }
 
   // ---------- Renderização do calendário ----------
   function renderizarCalendario() {
@@ -678,6 +783,116 @@
     }
 
     renderizarResumoMes();
+    renderizarLembretes();
+    renderizarPendencias();
+  }
+
+  function renderizarPendencias() {
+    var hojeStr = hojeChave();
+    var pendentes = [];
+
+    Object.keys(todosOsDados).forEach(function (data) {
+      var diasAtras = diferencaEmDias(data, hojeStr);
+      if (diasAtras <= DIAS_TOLERANCIA_PAGAMENTO) return; // ainda dentro do prazo de tolerância
+
+      (todosOsDados[data] || []).forEach(function (casa) {
+        if (casa.pago) return;
+        var clienteVinculado = clientes.find(function (c) { return c.id === casa.clienteId; }) || null;
+        var nome = clienteVinculado ? clienteVinculado.nome : (casa.cliente || 'Cliente removido');
+        pendentes.push({ data: data, casa: casa, nome: nome, diasAtras: diasAtras });
+      });
+    });
+
+    pendentes.sort(function (a, b) { return b.diasAtras - a.diasAtras; });
+
+    if (pendentes.length === 0) {
+      blocoPendencias.style.display = 'none';
+      listaPendencias.innerHTML = '';
+      return;
+    }
+
+    blocoPendencias.style.display = 'block';
+    listaPendencias.innerHTML = '';
+
+    pendentes.forEach(function (item) {
+      var linha = document.createElement('div');
+      linha.className = 'lembrete-item';
+
+      var info = document.createElement('div');
+      info.innerHTML = '<div class="lembrete-nome"></div><div class="lembrete-freq"></div>';
+      info.querySelector('.lembrete-nome').textContent = item.nome + ' — ' + formatarMoeda(item.casa.valor);
+      info.querySelector('.lembrete-freq').textContent = formatarDataCurta(item.data);
+
+      var selo = document.createElement('span');
+      selo.className = 'lembrete-quando atrasado';
+      selo.textContent = 'Há ' + item.diasAtras + 'd';
+
+      linha.appendChild(info);
+      linha.appendChild(selo);
+      linha.addEventListener('click', function () { navegarParaDataLembrete(item.data); });
+      listaPendencias.appendChild(linha);
+    });
+  }
+
+  function renderizarLembretes() {
+    var hojeStr = hojeChave();
+    var proximos = clientes
+      .filter(function (c) { return c.recorrencia && c.proximaData; })
+      .map(function (c) {
+        return { cliente: c, dias: diferencaEmDias(hojeStr, c.proximaData) };
+      })
+      .filter(function (item) { return item.dias <= 3; })
+      .sort(function (a, b) { return a.dias - b.dias; });
+
+    if (proximos.length === 0) {
+      blocoLembretes.style.display = 'none';
+      listaLembretes.innerHTML = '';
+      return;
+    }
+
+    blocoLembretes.style.display = 'block';
+    listaLembretes.innerHTML = '';
+
+    proximos.forEach(function (item) {
+      var linha = document.createElement('div');
+      linha.className = 'lembrete-item';
+
+      var info = document.createElement('div');
+      var htmlInfo = '<div class="lembrete-nome"></div><div class="lembrete-freq"></div>';
+      info.innerHTML = htmlInfo;
+      info.querySelector('.lembrete-nome').textContent = item.cliente.nome;
+      info.querySelector('.lembrete-freq').textContent = NOMES_RECORRENCIA[item.cliente.recorrencia] || '';
+
+      var selo = document.createElement('span');
+      var textoQuando, classeQuando;
+      if (item.dias < 0) {
+        textoQuando = 'Atrasada ' + Math.abs(item.dias) + 'd';
+        classeQuando = 'atrasado';
+      } else if (item.dias === 0) {
+        textoQuando = 'Hoje';
+        classeQuando = 'hoje';
+      } else if (item.dias === 1) {
+        textoQuando = 'Amanhã';
+        classeQuando = 'futuro';
+      } else {
+        textoQuando = 'Em ' + item.dias + 'd';
+        classeQuando = 'futuro';
+      }
+      selo.className = 'lembrete-quando ' + classeQuando;
+      selo.textContent = textoQuando;
+
+      linha.appendChild(info);
+      linha.appendChild(selo);
+      linha.addEventListener('click', function () { navegarParaDataLembrete(item.cliente.proximaData); });
+      listaLembretes.appendChild(linha);
+    });
+  }
+
+  function navegarParaDataLembrete(data) {
+    var partes = data.split('-').map(Number);
+    mesVisivelAno = partes[0];
+    mesVisivelMes = partes[1] - 1;
+    abrirDia(data);
   }
 
   function renderizarResumoMes() {
@@ -863,7 +1078,7 @@
     casaEmEdicaoId = casa ? casa.id : null;
     tituloModal.textContent = casa ? 'Editar casa' : 'Adicionar casa';
     popularSelectClientes(casa ? casa.clienteId : '');
-    campoValor.value = casa ? String(casa.valor).replace('.', ',') : '';
+    campoValor.value = casa ? String(casa.valor) : '';
     statusFormulario = casa ? !!casa.pago : false;
     atualizarOpcoesStatus();
     validarFormulario();
@@ -884,7 +1099,7 @@
   function valorFormularioNumero() {
     var texto = campoValor.value.trim();
     if (!texto) return NaN;
-    var normalizado = texto.replace(/\./g, '').replace(',', '.');
+    var normalizado = texto.replace(/,/g, '');
     return parseFloat(normalizado);
   }
 
@@ -909,6 +1124,8 @@
 
     var lista = todosOsDados[diaSelecionado] ? todosOsDados[diaSelecionado].slice() : [];
 
+    var casaEraNova = !casaEmEdicaoId;
+
     if (casaEmEdicaoId) {
       lista = lista.map(function (c) {
         if (c.id === casaEmEdicaoId) {
@@ -922,6 +1139,19 @@
 
     todosOsDados[diaSelecionado] = lista;
     salvarTudo(todosOsDados);
+
+    // Se essa casa é de um cliente recorrente e é uma casa nova (não edição),
+    // avança automaticamente a "próxima visita prevista" a partir desta data.
+    if (casaEraNova && clienteSelecionado.recorrencia) {
+      clientes = clientes.map(function (c) {
+        if (c.id === clienteSelecionado.id) {
+          return Object.assign({}, c, { proximaData: calcularProximaData(diaSelecionado, c.recorrencia) });
+        }
+        return c;
+      });
+      salvarClientesStorage(clientes);
+    }
+
     fecharModal();
     renderizarListaCasas();
   });
@@ -1017,6 +1247,9 @@
     campoClienteTelefone.value = cliente ? (cliente.telefone || '') : '';
     campoClienteEndereco.value = cliente ? (cliente.endereco || '') : '';
     campoClienteObs.value = cliente ? (cliente.observacoes || '') : '';
+    campoClienteRecorrencia.value = cliente ? (cliente.recorrencia || '') : '';
+    campoClienteProximaData.value = cliente ? (cliente.proximaData || '') : '';
+    atualizarVisibilidadeProximaData();
     validarFormularioCliente();
     fundoModalCliente.classList.add('ativo');
   }
@@ -1024,6 +1257,15 @@
   function fecharModalCliente() {
     fundoModalCliente.classList.remove('ativo');
   }
+
+  function atualizarVisibilidadeProximaData() {
+    if (campoClienteRecorrencia.value) {
+      blocoProximaData.classList.remove('oculto');
+    } else {
+      blocoProximaData.classList.add('oculto');
+    }
+  }
+  campoClienteRecorrencia.addEventListener('change', atualizarVisibilidadeProximaData);
 
   function validarFormularioCliente() {
     btnSalvarModalCliente.disabled = campoClienteNome.value.trim().length === 0;
@@ -1039,6 +1281,8 @@
       telefone: campoClienteTelefone.value.trim(),
       endereco: campoClienteEndereco.value.trim(),
       observacoes: campoClienteObs.value.trim(),
+      recorrencia: campoClienteRecorrencia.value,
+      proximaData: campoClienteRecorrencia.value ? campoClienteProximaData.value : '',
     };
 
     var clienteSalvo;
