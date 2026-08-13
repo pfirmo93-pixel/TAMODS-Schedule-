@@ -2,7 +2,7 @@
 // abra rapidinho e continue funcionando mesmo sem internet (os dados das
 // casas já ficam salvos no aparelho via localStorage, independente disso).
 
-const CACHE = 'agenda-limpeza-v6';
+const CACHE = 'agenda-limpeza-v9';
 const ARQUIVOS = [
   './',
   './index.html',
